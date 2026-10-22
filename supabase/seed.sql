@@ -1,0 +1,29 @@
+-- ==============================================================================
+-- TRADING JOURNAL - SUPABASE SAMPLE SEED DATA
+-- Note: Replace '00000000-0000-0000-0000-000000000000' with your actual auth.users id
+-- or use the web application's built-in Demo & Sync button.
+-- ==============================================================================
+
+-- Example Profile
+-- INSERT INTO public.profiles (id, name, initial_capital, currency)
+-- VALUES ('00000000-0000-0000-0000-000000000000', 'Pro Trader', 500000, '₹')
+-- ON CONFLICT (id) DO NOTHING;
+
+-- Example Trades
+-- INSERT INTO public.trades (
+--     id, user_id, trade_date, entry_time, exit_time, instrument, instrument_type,
+--     direction, quantity, entry_price, exit_price, stop_loss, target,
+--     account_capital, risk_percent, risk_amount, planned_rr, actual_rr,
+--     position_size_method, gross_pnl, gross_pnl_percent, brokerage, charges,
+--     net_pnl, net_pnl_percent, r_multiple, strategy, market_condition, timeframe,
+--     plan_followed, fomo, revenge_trading, overtrading, early_exit, mistake_tags
+-- ) VALUES
+-- (
+--     uuid_generate_v4(), '00000000-0000-0000-0000-000000000000', '2026-10-22',
+--     '2026-10-22 09:22:00+00', '2026-10-22 09:54:00+00', 'NIFTY', 'NIFTY',
+--     'Long', 50, 25800, 25920, 25740, 25950,
+--     500000, 1.0, 3000, 2.5, 2.0,
+--     'auto', 6000, 0.46, 40, 25,
+--     5935, 0.46, 1.98, 'Breakout', 'Trending', '5m',
+--     true, false, false, false, false, ARRAY['Followed Plan', 'Perfect Execution']
+-- );
