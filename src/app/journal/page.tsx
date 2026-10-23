@@ -81,6 +81,7 @@ export default function JournalPage() {
     instrument: 'All',
     strategy: 'All',
     direction: 'All',
+    optionType: 'All',
     marketCondition: 'All',
     result: 'All',
     psychologyTag: 'All',
@@ -177,7 +178,9 @@ export default function JournalPage() {
         const matchesReason = trade.entry_reason?.toLowerCase().includes(q);
         const matchesLearning = trade.learning?.toLowerCase().includes(q);
         const matchesNotes = trade.psychology_notes?.toLowerCase().includes(q);
-        if (!matchesInstrument && !matchesStrategy && !matchesReason && !matchesLearning && !matchesNotes) {
+        const matchesStrike = trade.strike_price ? trade.strike_price.toString().includes(q) : false;
+        const matchesOption = trade.option_type ? trade.option_type.toLowerCase().includes(q) : false;
+        if (!matchesInstrument && !matchesStrategy && !matchesReason && !matchesLearning && !matchesNotes && !matchesStrike && !matchesOption) {
           return false;
         }
       }
@@ -187,12 +190,17 @@ export default function JournalPage() {
         return false;
       }
 
-      // 3. Strategy
+      // 3. Option Type (CE / PE)
+      if (filters.optionType && filters.optionType !== 'All' && trade.option_type !== filters.optionType) {
+        return false;
+      }
+
+      // 4. Strategy
       if (filters.strategy !== 'All' && trade.strategy !== filters.strategy) {
         return false;
       }
 
-      // 4. Direction
+      // 5. Direction
       if (filters.direction !== 'All' && trade.direction !== filters.direction) {
         return false;
       }

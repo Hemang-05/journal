@@ -24,6 +24,7 @@ export const TradeFilters: React.FC<TradeFiltersProps> = ({
     filters.instrument !== 'All' ||
     filters.strategy !== 'All' ||
     filters.direction !== 'All' ||
+    (filters.optionType && filters.optionType !== 'All') ||
     filters.marketCondition !== 'All' ||
     filters.result !== 'All' ||
     filters.psychologyTag !== 'All';
@@ -35,6 +36,7 @@ export const TradeFilters: React.FC<TradeFiltersProps> = ({
       instrument: 'All',
       strategy: 'All',
       direction: 'All',
+      optionType: 'All',
       marketCondition: 'All',
       result: 'All',
       psychologyTag: 'All',
@@ -81,7 +83,7 @@ export const TradeFilters: React.FC<TradeFiltersProps> = ({
       </div>
 
       {/* Filter Dropdowns Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2 text-xs">
         
         {/* Direction */}
         <div>
@@ -94,6 +96,20 @@ export const TradeFilters: React.FC<TradeFiltersProps> = ({
             <option value="All">All Sides</option>
             <option value="Long">Long Only</option>
             <option value="Short">Short Only</option>
+          </select>
+        </div>
+
+        {/* Option Type */}
+        <div>
+          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-0.5">Option Type</label>
+          <select
+            value={filters.optionType || 'All'}
+            onChange={(e) => setFilters((prev) => ({ ...prev, optionType: e.target.value as any }))}
+            className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500"
+          >
+            <option value="All">All Contracts</option>
+            <option value="CE">CE (Calls)</option>
+            <option value="PE">PE (Puts)</option>
           </select>
         </div>
 

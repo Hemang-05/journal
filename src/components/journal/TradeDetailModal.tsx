@@ -70,10 +70,26 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
             </span>
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-white tracking-tight">
                   {trade.instrument}
                 </h2>
+                {trade.strike_price && (
+                  <span className="font-mono font-bold text-amber-300 text-sm">
+                    {trade.strike_price}
+                  </span>
+                )}
+                {trade.option_type && (
+                  <span
+                    className={`text-xs font-sans font-black px-2 py-0.5 rounded border ${
+                      trade.option_type === 'CE'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    }`}
+                  >
+                    {trade.option_type}
+                  </span>
+                )}
                 <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                   {trade.instrument_type}
                 </span>
@@ -230,6 +246,30 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
                 </strong>
               </div>
             </div>
+
+            {(trade.strike_price || trade.option_type || trade.expiry_date) && (
+              <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center gap-4 text-xs flex-wrap">
+                <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wide">Option Contract:</span>
+                {trade.strike_price && (
+                  <span>
+                    Strike: <strong className="font-mono text-amber-300 font-bold">{trade.strike_price}</strong>
+                  </span>
+                )}
+                {trade.option_type && (
+                  <span>
+                    Type:{' '}
+                    <strong className={trade.option_type === 'CE' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                      {trade.option_type} ({trade.option_type === 'CE' ? 'Call' : 'Put'})
+                    </strong>
+                  </span>
+                )}
+                {trade.expiry_date && (
+                  <span>
+                    Expiry: <strong className="font-mono text-slate-300">{trade.expiry_date}</strong>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Entry Reason */}

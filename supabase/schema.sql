@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS public.trades (
     exit_time TIMESTAMPTZ,
     instrument TEXT NOT NULL,
     instrument_type TEXT,
+    strike_price NUMERIC,
+    option_type TEXT CHECK (option_type IN ('CE', 'PE')),
+    expiry_date DATE,
     direction TEXT NOT NULL CHECK (direction IN ('Long', 'Short')),
     quantity NUMERIC NOT NULL,
     entry_price NUMERIC NOT NULL,
@@ -184,3 +187,11 @@ CREATE TRIGGER set_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
+
+-- ------------------------------------------------------------------------------
+-- 7. MIGRATIONS FOR EXISTING INSTALLS
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS strike_price NUMERIC;
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS option_type TEXT CHECK (option_type IN ('CE', 'PE'));
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS expiry_date DATE;
+

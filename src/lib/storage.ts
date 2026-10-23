@@ -137,6 +137,11 @@ export const saveTradeToStore = async (tradeInput: Partial<Trade>): Promise<Trad
     exit_time: tradeInput.exit_time || null,
     instrument: (tradeInput.instrument || 'NIFTY').trim().toUpperCase(),
     instrument_type: tradeInput.instrument_type || 'NIFTY',
+    strike_price: tradeInput.strike_price !== undefined && tradeInput.strike_price !== null && tradeInput.strike_price !== ('' as any) && !isNaN(Number(tradeInput.strike_price))
+      ? Number(tradeInput.strike_price)
+      : null,
+    option_type: tradeInput.option_type || null,
+    expiry_date: tradeInput.expiry_date || null,
     direction: tradeInput.direction || 'Long',
     quantity: Number(tradeInput.quantity) || 1,
     entry_price: Number(tradeInput.entry_price) || 0,

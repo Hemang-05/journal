@@ -4,6 +4,7 @@
 
 export type Direction = 'Long' | 'Short';
 export type PositionSizeMethod = 'manual' | 'auto';
+export type OptionType = 'CE' | 'PE';
 
 export type InstrumentType =
   | 'Stock'
@@ -108,6 +109,9 @@ export interface Trade {
   exit_time?: string | null;
   instrument: string;
   instrument_type: InstrumentType;
+  strike_price?: number | null;
+  option_type?: OptionType | null;
+  expiry_date?: string | null;
   direction: Direction;
   quantity: number;
   entry_price: number;
@@ -171,6 +175,7 @@ export interface FilterOptions {
   instrument: string;
   strategy: string;
   direction: 'All' | 'Long' | 'Short';
+  optionType?: 'All' | 'CE' | 'PE';
   marketCondition: string;
   result: 'All' | 'Winning' | 'Losing' | 'BreakEven';
   psychologyTag: 'All' | 'fomo' | 'revenge' | 'overtrading' | 'early_exit' | 'plan_followed' | 'plan_not_followed';

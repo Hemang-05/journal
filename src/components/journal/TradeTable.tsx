@@ -91,8 +91,24 @@ export const TradeTable: React.FC<TradeTableProps> = ({
 
                   {/* Instrument */}
                   <td className="py-3 px-3 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-black text-white tracking-tight">{trade.instrument}</span>
+                      {trade.strike_price && (
+                        <span className="font-mono font-bold text-amber-300">
+                          {trade.strike_price}
+                        </span>
+                      )}
+                      {trade.option_type && (
+                        <span
+                          className={`text-[10px] font-sans font-black px-1.5 py-0.5 rounded border ${
+                            trade.option_type === 'CE'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                          }`}
+                        >
+                          {trade.option_type}
+                        </span>
+                      )}
                       <span className="text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                         {trade.instrument_type}
                       </span>
