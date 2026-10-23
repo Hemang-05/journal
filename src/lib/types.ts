@@ -109,6 +109,7 @@ export interface Trade {
   exit_time?: string | null;
   instrument: string;
   instrument_type: InstrumentType;
+  market?: string | null;
   strike_price?: number | null;
   option_type?: OptionType | null;
   expiry_date?: string | null;

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.trades (
     exit_time TIMESTAMPTZ,
     instrument TEXT NOT NULL,
     instrument_type TEXT,
+    market TEXT DEFAULT 'F&O',
     strike_price NUMERIC,
     option_type TEXT CHECK (option_type IN ('CE', 'PE')),
     expiry_date DATE,
@@ -191,6 +192,7 @@ CREATE TRIGGER set_profiles_updated_at
 -- ------------------------------------------------------------------------------
 -- 7. MIGRATIONS FOR EXISTING INSTALLS
 -- ------------------------------------------------------------------------------
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS market TEXT DEFAULT 'F&O';
 ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS strike_price NUMERIC;
 ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS option_type TEXT CHECK (option_type IN ('CE', 'PE'));
 ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS expiry_date DATE;

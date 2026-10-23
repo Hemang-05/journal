@@ -88,8 +88,9 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
   const [exitTime, setExitTime] = useState('');
   const [instrument, setInstrument] = useState('NIFTY');
   const [instrumentType, setInstrumentType] = useState<InstrumentType>('NIFTY');
+  const [market, setMarket] = useState<string>('F&O');
+  const [contractType, setContractType] = useState<string>('PE');
   const [strikePrice, setStrikePrice] = useState<string>('');
-  const [optionType, setOptionType] = useState<OptionType | null>(null);
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [direction, setDirection] = useState<Direction>('Long');
   const [quantity, setQuantity] = useState<string>('50');
@@ -153,8 +154,17 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
       setExitTime(initialTrade.exit_time || '');
       setInstrument(initialTrade.instrument || 'NIFTY');
       setInstrumentType(initialTrade.instrument_type || 'NIFTY');
+      setMarket(initialTrade.market || 'F&O');
+      if (initialTrade.option_type === 'PE') {
+        setContractType('PE');
+      } else if (initialTrade.option_type === 'CE') {
+        setContractType('CE');
+      } else if (initialTrade.instrument_type === 'Futures') {
+        setContractType('FUT');
+      } else {
+        setContractType('None');
+      }
       setStrikePrice(initialTrade.strike_price !== null && initialTrade.strike_price !== undefined ? initialTrade.strike_price.toString() : '');
-      setOptionType(initialTrade.option_type || null);
       setExpiryDate(initialTrade.expiry_date || '');
       setDirection(initialTrade.direction || 'Long');
       setQuantity(initialTrade.quantity?.toString() || '1');
@@ -201,8 +211,9 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
       setExitTime('');
       setInstrument('NIFTY');
       setInstrumentType('NIFTY');
+      setMarket('F&O');
+      setContractType('PE');
       setStrikePrice('');
-      setOptionType(null);
       setExpiryDate('');
       setDirection('Long');
       setQuantity('50');
@@ -358,15 +369,19 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
 
     setIsSaving(true);
     try {
+      const resolvedOptionType: OptionType | null =
+        contractType === 'CE' ? 'CE' : contractType === 'PE' ? 'PE' : null;
+
       const tradePayload: Partial<Trade> = {
         ...(initialTrade ? { id: initialTrade.id } : {}),
         trade_date: tradeDate,
         entry_time: entryTime,
         exit_time: exitTime || null,
         instrument: instrument.trim().toUpperCase(),
-        instrument_type: instrumentType,
-        strike_price: strikePrice ? Number(strikePrice) : null,
-        option_type: optionType,
+        instrument_type: contractType === 'FUT' ? 'Futures' : (contractType === 'CE' || contractType === 'PE') ? 'Options' : instrumentType,
+        market,
+        strike_price: (contractType === 'CE' || contractType === 'PE') && strikePrice ? Number(strikePrice) : null,
+        option_type: resolvedOptionType,
         expiry_date: expiryDate.trim() || null,
         direction,
         quantity: Number(quantity),
@@ -409,7 +424,6 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
       if (isAnother) {
         // Clear prices for next fast entry while preserving date & instrument
         setStrikePrice('');
-        setOptionType(null);
         setExpiryDate('');
         setEntryPrice('');
         setExitPrice('');
@@ -532,38 +546,42 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
             {openSections.basic && (
               <div className="p-4 space-y-4">
                 
-                {/* Row 1: Direction, Date, Entry Time, Exit Time */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Direction <span className="text-rose-400">*</span>
+                {/* Underlying Instrument Selection with Quick Picks */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Underlying Instrument <span className="text-rose-400">*</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-lg border border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setDirection('Long')}
-                        className={`py-1.5 text-xs font-bold rounded transition-all ${
-                          direction === 'Long'
-                            ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Long / Buy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDirection('Short')}
-                        className={`py-1.5 text-xs font-bold rounded transition-all ${
-                          direction === 'Short'
-                            ? 'bg-rose-500 text-white shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Short / Sell
-                      </button>
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                      {COMMON_INSTRUMENTS.slice(0, 7).map((sym) => (
+                        <button
+                          key={sym}
+                          type="button"
+                          onClick={() => handleInstrumentSelect(sym)}
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                            instrument === sym
+                              ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 font-bold shadow-sm shadow-blue-500/20'
+                              : 'bg-slate-800/80 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                          }`}
+                        >
+                          {sym}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
+                  <input
+                    type="text"
+                    placeholder="e.g. NIFTY, BANKNIFTY, FINNIFTY, RELIANCE"
+                    value={instrument}
+                    onChange={(e) => setInstrument(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-[#0B132B] border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-inner"
+                  />
+                  {errors.instrument && <p className="text-[11px] text-rose-400 mt-1">{errors.instrument}</p>}
+                </div>
+
+                {/* Date & Time Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">
                       Date <span className="text-rose-400">*</span>
@@ -572,7 +590,7 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                       type="date"
                       value={tradeDate}
                       onChange={(e) => setTradeDate(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     />
                     {errors.tradeDate && <p className="text-[11px] text-rose-400 mt-1">{errors.tradeDate}</p>}
                   </div>
@@ -585,7 +603,7 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                       type="time"
                       value={entryTime}
                       onChange={(e) => setEntryTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     />
                     {errors.entryTime && <p className="text-[11px] text-rose-400 mt-1">{errors.entryTime}</p>}
                   </div>
@@ -598,169 +616,169 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                       type="time"
                       value={exitTime}
                       onChange={(e) => setExitTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
-                {/* Row 2: Searchable Instrument + Instrument Type + Quick Picks */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-400">
-                      Instrument <span className="text-rose-400">*</span>
-                    </label>
-                    <div className="flex items-center gap-1 overflow-x-auto py-0.5">
-                      {COMMON_INSTRUMENTS.slice(0, 6).map((sym) => (
-                        <button
-                          key={sym}
-                          type="button"
-                          onClick={() => handleInstrumentSelect(sym)}
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
-                            instrument === sym
-                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold'
-                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                          }`}
-                        >
-                          {sym}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      placeholder="e.g. NIFTY, RELIANCE, BTCUSD"
-                      value={instrument}
-                      onChange={(e) => setInstrument(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono uppercase bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-                    />
-
-                    <select
-                      value={instrumentType}
-                      onChange={(e) => setInstrumentType(e.target.value as InstrumentType)}
-                      className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="Stock">Stock</option>
-                      <option value="NIFTY">NIFTY</option>
-                      <option value="BANKNIFTY">BANKNIFTY</option>
-                      <option value="FINNIFTY">FINNIFTY</option>
-                      <option value="Futures">Futures</option>
-                      <option value="Options">Options</option>
-                      <option value="Forex">Forex</option>
-                      <option value="Crypto">Crypto</option>
-                      <option value="Commodity">Commodity</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  {errors.instrument && <p className="text-[11px] text-rose-400 mt-1">{errors.instrument}</p>}
-                </div>
-
-                {/* Options / Strike Details (Strike Price & CE / PE) */}
-                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-700/80 shadow-md space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white tracking-wide">Options & Strike Selection</span>
-                      <span className="text-[10px] text-slate-400 font-sans">(Strike Price & CE / PE)</span>
-                    </div>
-                    {optionType && (
-                      <button
-                        type="button"
-                        onClick={() => setOptionType(null)}
-                        className="text-[11px] text-slate-400 hover:text-white underline font-sans cursor-pointer"
-                      >
-                        Reset to None (Equity/Futures)
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Strike Price */}
+                {/* EXACT F&O / CONTRACT BLOCK (Matches user screenshot: Market, Direction | Contract, Strike, Expiry | Entry price, Exit price) */}
+                <div className="p-4 rounded-2xl bg-[#090F1F] border border-slate-700/80 shadow-lg shadow-black/20 space-y-4">
+                  
+                  {/* Row 1: Market & Direction */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
-                        Strike Price
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Market
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={market}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setMarket(val);
+                            if (val === 'Equity') {
+                              setContractType('None');
+                              setInstrumentType('Stock');
+                            } else if (val === 'F&O' && contractType === 'None') {
+                              setContractType('PE');
+                              setInstrumentType('Options');
+                            }
+                          }}
+                          className="w-full appearance-none px-3.5 py-2.5 pr-10 text-sm font-medium bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer shadow-inner"
+                        >
+                          <option value="F&O">F&O</option>
+                          <option value="Equity">Equity</option>
+                          <option value="Commodity">Commodity</option>
+                          <option value="Crypto">Crypto</option>
+                          <option value="Currency">Currency</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Direction
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={direction}
+                          onChange={(e) => setDirection(e.target.value as Direction)}
+                          className="w-full appearance-none px-3.5 py-2.5 pr-10 text-sm font-medium bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer shadow-inner"
+                        >
+                          <option value="Long">Long</option>
+                          <option value="Short">Short</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Contract, Strike, Expiry */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Contract
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={contractType}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setContractType(val);
+                            if (val === 'CE' || val === 'PE') setInstrumentType('Options');
+                            else if (val === 'FUT') setInstrumentType('Futures');
+                            else if (val === 'None' && market === 'Equity') setInstrumentType('Stock');
+                          }}
+                          className="w-full appearance-none px-3.5 py-2.5 pr-10 text-sm font-medium bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer shadow-inner"
+                        >
+                          <option value="Put (PE)">Put (PE)</option>
+                          <option value="PE">Put (PE)</option>
+                          <option value="Call (CE)">Call (CE)</option>
+                          <option value="CE">Call (CE)</option>
+                          <option value="Futures (FUT)">Futures (FUT)</option>
+                          <option value="FUT">Futures (FUT)</option>
+                          <option value="None">None (Equity/Cash)</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Strike
                       </label>
                       <input
                         type="number"
                         step="any"
-                        placeholder="e.g. 25800, 54200"
+                        placeholder=""
                         value={strikePrice}
                         onChange={(e) => setStrikePrice(e.target.value)}
-                        className="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-900 border border-slate-700 rounded-lg text-amber-300 placeholder-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
+                        className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner"
                       />
                     </div>
 
-                    {/* CE / PE Option Type Selector */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
-                        Option Type (CE / PE)
-                      </label>
-                      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900 rounded-lg border border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = optionType === 'CE' ? null : 'CE';
-                            setOptionType(next);
-                            if (next && instrumentType === 'Stock') setInstrumentType('Options');
-                          }}
-                          className={`py-1.5 text-xs font-black rounded transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            optionType === 'CE'
-                              ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black shadow-md shadow-emerald-500/30 ring-1 ring-emerald-300'
-                              : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800'
-                          }`}
-                        >
-                          <span>CE</span>
-                          <span className="text-[10px] font-semibold opacity-90">(Call)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = optionType === 'PE' ? null : 'PE';
-                            setOptionType(next);
-                            if (next && instrumentType === 'Stock') setInstrumentType('Options');
-                          }}
-                          className={`py-1.5 text-xs font-black rounded transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            optionType === 'PE'
-                              ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white font-black shadow-md shadow-rose-500/30 ring-1 ring-rose-300'
-                              : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
-                          }`}
-                        >
-                          <span>PE</span>
-                          <span className="text-[10px] font-semibold opacity-90">(Put)</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Expiry Date */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
-                        Expiry Date <span className="text-slate-500 font-normal">(Optional)</span>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Expiry
                       </label>
                       <input
                         type="date"
                         value={expiryDate}
                         onChange={(e) => setExpiryDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs font-mono bg-slate-900 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer shadow-inner"
                       />
                     </div>
                   </div>
 
+                  {/* Row 3: Entry price & Exit price */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Entry price <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder=""
+                        value={entryPrice}
+                        onChange={(e) => setEntryPrice(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner"
+                      />
+                      {errors.entryPrice && <p className="text-[11px] text-rose-400 mt-1">{errors.entryPrice}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-300 mb-1.5">
+                        Exit price <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder=""
+                        value={exitPrice}
+                        onChange={(e) => setExitPrice(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#0B132B] border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner"
+                      />
+                      {errors.exitPrice && <p className="text-[11px] text-rose-400 mt-1">{errors.exitPrice}</p>}
+                    </div>
+                  </div>
+
                   {/* Active Contract Preview */}
-                  {(strikePrice || optionType) && (
-                    <div className="flex items-center gap-2 pt-1 text-xs">
-                      <span className="text-slate-400 text-[11px]">Selected Contract:</span>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700 font-mono">
+                  {(strikePrice || (contractType !== 'None' && contractType !== 'FUT')) && (
+                    <div className="flex items-center gap-2 pt-1 text-xs border-t border-slate-800/80">
+                      <span className="text-slate-400 text-[11px]">Contract Preview:</span>
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-[#0B132B] border border-slate-700 font-mono">
                         <span className="font-extrabold text-white">{instrument || 'NIFTY'}</span>
                         {strikePrice && <span className="font-bold text-amber-300">{strikePrice}</span>}
-                        {optionType && (
-                          <span
-                            className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
-                              optionType === 'CE'
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                            }`}
-                          >
-                            {optionType}
+                        {(contractType === 'CE' || contractType === 'Call (CE)') && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            CE
+                          </span>
+                        )}
+                        {(contractType === 'PE' || contractType === 'Put (PE)') && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            PE
                           </span>
                         )}
                         {expiryDate && <span className="text-[10px] text-slate-400 font-sans">Exp: {expiryDate}</span>}
@@ -769,10 +787,10 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                   )}
                 </div>
 
-                {/* Row 3: Prices & Quantity */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {/* Additional Parameters: Quantity, Stop Loss, Target */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                       Quantity / Lots <span className="text-rose-400">*</span>
                     </label>
                     <input
@@ -781,66 +799,36 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                       placeholder="50"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-blue-500"
                     />
                     {errors.quantity && <p className="text-[11px] text-rose-400 mt-1">{errors.quantity}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Entry Price <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Stop Loss <span className="text-slate-500 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="number"
                       step="any"
-                      placeholder="25800.00"
-                      value={entryPrice}
-                      onChange={(e) => setEntryPrice(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-                    />
-                    {errors.entryPrice && <p className="text-[11px] text-rose-400 mt-1">{errors.entryPrice}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Exit Price <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="25920.00"
-                      value={exitPrice}
-                      onChange={(e) => setExitPrice(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-                    />
-                    {errors.exitPrice && <p className="text-[11px] text-rose-400 mt-1">{errors.exitPrice}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Stop Loss
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="25740.00"
+                      placeholder=""
                       value={stopLoss}
                       onChange={(e) => setStopLoss(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Target
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Target <span className="text-slate-500 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="number"
                       step="any"
-                      placeholder="25950.00"
+                      placeholder=""
                       value={target}
                       onChange={(e) => setTarget(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>

@@ -13,6 +13,7 @@ export function formatTradeForExport(trade: Trade) {
     'Exit Time': trade.exit_time || '',
     'Instrument': trade.instrument,
     'Instrument Type': trade.instrument_type,
+    'Market': trade.market || 'F&O',
     'Strike Price': trade.strike_price ?? '',
     'Option Type': trade.option_type ?? '',
     'Expiry Date': trade.expiry_date ?? '',
