@@ -47,6 +47,18 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
   const isProfit = trade.net_pnl !== null && trade.net_pnl !== undefined && trade.net_pnl > 0;
   const isLoss = trade.net_pnl !== null && trade.net_pnl !== undefined && trade.net_pnl < 0;
 
+  const slPoints = trade.stop_loss && trade.entry_price
+    ? Math.abs(Number((trade.direction === 'Long' ? (trade.entry_price - trade.stop_loss) : (trade.stop_loss - trade.entry_price)).toFixed(2)))
+    : null;
+
+  const targetPoints = trade.target && trade.entry_price
+    ? Math.abs(Number((trade.direction === 'Long' ? (trade.target - trade.entry_price) : (trade.entry_price - trade.target)).toFixed(2)))
+    : null;
+
+  const targetProfit = targetPoints && trade.quantity
+    ? Number((targetPoints * trade.quantity).toFixed(2))
+    : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl bg-[#0D1322] border border-slate-700/90 text-slate-100 shadow-2xl overflow-hidden">
@@ -217,12 +229,22 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
                 <span className="text-sm font-bold font-mono text-rose-400">
                   {trade.stop_loss ? trade.stop_loss.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
                 </span>
+                {trade.risk_amount ? (
+                  <span className="text-[10px] text-rose-300 block font-mono mt-0.5 font-semibold">
+                    Loss: -{formatCurrency(trade.risk_amount, currency)} {slPoints ? `(-${slPoints} pts)` : ''}
+                  </span>
+                ) : null}
               </div>
               <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
                 <span className="text-[11px] text-slate-400 block">Target</span>
                 <span className="text-sm font-bold font-mono text-emerald-400">
                   {trade.target ? trade.target.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
                 </span>
+                {targetProfit ? (
+                  <span className="text-[10px] text-emerald-300 block font-mono mt-0.5 font-semibold">
+                    Profit: +{formatCurrency(targetProfit, currency)} {targetPoints ? `(+${targetPoints} pts)` : ''}
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -232,8 +254,13 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
                 <strong className="text-white font-mono">{trade.quantity}</strong>
               </div>
               <div>
-                <span className="text-slate-400 text-[11px]">Planned Risk:</span>{' '}
-                <strong className="text-white font-mono">{formatCurrency(trade.risk_amount, currency)}</strong>
+                <span className="text-slate-400 text-[11px]">Loss if SL Hit:</span>{' '}
+                <strong className="text-rose-400 font-mono">
+                  {trade.risk_amount ? `-${formatCurrency(trade.risk_amount, currency)}` : '—'}
+                </strong>
+                {slPoints !== null && (
+                  <span className="text-[10px] text-rose-400/80 ml-1 font-mono">(-{slPoints} pts)</span>
+                )}
               </div>
               <div>
                 <span className="text-slate-400 text-[11px]">Planned R:R:</span>{' '}

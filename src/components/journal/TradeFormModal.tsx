@@ -17,6 +17,8 @@ import {
   Image as ImageIcon,
   Check,
   AlertCircle,
+  AlertTriangle,
+  Target,
 } from 'lucide-react';
 import {
   Trade,
@@ -499,8 +501,8 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
           </div>
         </div>
 
-        {/* Real-Time Floating P&L Indicator Bar */}
-        {calculatedFinancials.net_pnl !== null && (
+        {/* Real-Time Floating Indicator Bar (P&L or Risk/Downside on SL) */}
+        {calculatedFinancials.net_pnl !== null ? (
           <div className={`px-6 py-2.5 flex items-center justify-between text-xs font-mono border-b ${
             calculatedFinancials.net_pnl >= 0
               ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
@@ -513,6 +515,11 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
               </span>
               <span>Gross: {formatCurrency(calculatedFinancials.gross_pnl, currency)}</span>
               <span>Charges: {formatCurrency(calculatedFinancials.totalCharges, currency)}</span>
+              {calculatedFinancials.sl_loss_amount !== null && (
+                <span className="text-rose-400 border-l border-slate-700/80 pl-3">
+                  Loss if SL Hit: <strong className="font-bold">-{formatCurrency(calculatedFinancials.sl_loss_amount, currency)}</strong> (-{calculatedFinancials.sl_loss_points} pts)
+                </span>
+              )}
             </div>
             {calculatedFinancials.r_multiple !== null && (
               <span className={`px-2 py-0.5 rounded font-bold ${
@@ -522,7 +529,42 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
               </span>
             )}
           </div>
-        )}
+        ) : (calculatedFinancials.sl_loss_amount !== null || calculatedFinancials.target_profit_amount !== null) ? (
+          <div className="px-6 py-2.5 flex items-center justify-between text-xs font-mono border-b bg-slate-900/90 border-slate-800 text-slate-200">
+            <div className="flex items-center gap-4 flex-wrap">
+              {calculatedFinancials.sl_loss_amount !== null && (
+                <span className="flex items-center gap-1.5 text-rose-400">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Loss if SL Hit:</span>
+                  <strong className="text-sm font-bold text-rose-300">
+                    -{formatCurrency(calculatedFinancials.sl_loss_amount, currency)}
+                  </strong>
+                  <span className="text-rose-400/80">(-{calculatedFinancials.sl_loss_points} pts)</span>
+                  {calculatedFinancials.sl_loss_percent_capital !== null && (
+                    <span className="text-[10px] text-rose-300 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-500/30">
+                      {calculatedFinancials.sl_loss_percent_capital}% Cap
+                    </span>
+                  )}
+                </span>
+              )}
+              {calculatedFinancials.target_profit_amount !== null && (
+                <span className="flex items-center gap-1.5 text-emerald-400 border-l border-slate-700/80 pl-3">
+                  <Target className="w-3.5 h-3.5 shrink-0" />
+                  <span>Profit on Target:</span>
+                  <strong className="text-sm font-bold text-emerald-300">
+                    +{formatCurrency(calculatedFinancials.target_profit_amount, currency)}
+                  </strong>
+                  <span className="text-emerald-400/80">(+{calculatedFinancials.target_profit_points} pts)</span>
+                </span>
+              )}
+            </div>
+            {calculatedFinancials.planned_rr !== null && (
+              <span className="px-2 py-0.5 rounded font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Planned R:R 1:{calculatedFinancials.planned_rr}
+              </span>
+            )}
+          </div>
+        ) : null}
 
         {/* Scrollable Form Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -805,33 +847,196 @@ export const TradeFormModal: React.FC<TradeFormModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Stop Loss <span className="text-slate-500 font-normal">(Optional)</span>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span>
+                        Stop Loss <span className="text-slate-500 font-normal">(Optional)</span>
+                      </span>
+                      {calculatedFinancials.sl_loss_amount !== null && (
+                        <span className="text-[11px] font-mono font-bold text-rose-400">
+                          -{formatCurrency(calculatedFinancials.sl_loss_amount, currency)}
+                        </span>
+                      )}
                     </label>
                     <input
                       type="number"
                       step="any"
-                      placeholder=""
+                      placeholder={direction === 'Long' && entryPrice ? `< ${entryPrice}` : direction === 'Short' && entryPrice ? `> ${entryPrice}` : ''}
                       value={stopLoss}
                       onChange={(e) => setStopLoss(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-blue-500"
+                      className={`w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border rounded-xl text-white focus:outline-none transition-colors ${
+                        calculatedFinancials.sl_loss_amount !== null
+                          ? 'border-rose-500/50 focus:border-rose-400'
+                          : calculatedFinancials.is_sl_valid === false
+                          ? 'border-amber-500/60 focus:border-amber-400'
+                          : 'border-slate-800 focus:border-blue-500'
+                      }`}
                     />
+                    {calculatedFinancials.sl_loss_amount !== null && (
+                      <div className="mt-1.5 px-2.5 py-1 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 text-[11px] font-mono flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>Loss if SL Hit:</span>
+                          <strong className="text-rose-200">-{formatCurrency(calculatedFinancials.sl_loss_amount, currency)}</strong>
+                          <span className="text-rose-400/80">(-{calculatedFinancials.sl_loss_points} pts)</span>
+                        </div>
+                        {calculatedFinancials.sl_loss_percent_capital !== null && (
+                          <span className="text-[10px] text-rose-300 bg-rose-900/60 px-1.5 py-0.5 rounded font-semibold">
+                            {calculatedFinancials.sl_loss_percent_capital}% Cap
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {stopLoss && calculatedFinancials.is_sl_valid === false && (
+                      <div className="mt-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>
+                          {direction === 'Long'
+                            ? `SL must be below entry (${entryPrice || '—'}) for Long`
+                            : `SL must be above entry (${entryPrice || '—'}) for Short`}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Target <span className="text-slate-500 font-normal">(Optional)</span>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span>
+                        Target <span className="text-slate-500 font-normal">(Optional)</span>
+                      </span>
+                      {calculatedFinancials.target_profit_amount !== null && (
+                        <span className="text-[11px] font-mono font-bold text-emerald-400">
+                          +{formatCurrency(calculatedFinancials.target_profit_amount, currency)}
+                        </span>
+                      )}
                     </label>
                     <input
                       type="number"
                       step="any"
-                      placeholder=""
+                      placeholder={direction === 'Long' && entryPrice ? `> ${entryPrice}` : direction === 'Short' && entryPrice ? `< ${entryPrice}` : ''}
                       value={target}
                       onChange={(e) => setTarget(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-blue-500"
+                      className={`w-full px-3.5 py-2 text-xs font-mono bg-slate-950 border rounded-xl text-white focus:outline-none transition-colors ${
+                        calculatedFinancials.target_profit_amount !== null
+                          ? 'border-emerald-500/50 focus:border-emerald-400'
+                          : calculatedFinancials.is_target_valid === false
+                          ? 'border-amber-500/60 focus:border-amber-400'
+                          : 'border-slate-800 focus:border-blue-500'
+                      }`}
                     />
+                    {calculatedFinancials.target_profit_amount !== null && (
+                      <div className="mt-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Profit on Target:</span>
+                          <strong className="text-emerald-200">+{formatCurrency(calculatedFinancials.target_profit_amount, currency)}</strong>
+                          <span className="text-emerald-400/80">(+{calculatedFinancials.target_profit_points} pts)</span>
+                        </div>
+                        {calculatedFinancials.target_profit_percent_capital !== null && (
+                          <span className="text-[10px] text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded font-semibold">
+                            +{calculatedFinancials.target_profit_percent_capital}% Cap
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {target && calculatedFinancials.is_target_valid === false && (
+                      <div className="mt-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>
+                          {direction === 'Long'
+                            ? `Target must be above entry (${entryPrice || '—'}) for Long`
+                            : `Target must be below entry (${entryPrice || '—'}) for Short`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Real-Time Risk & Downside vs Upside Projection Card */}
+                {(calculatedFinancials.sl_loss_amount !== null || calculatedFinancials.target_profit_amount !== null) && (
+                  <div className="mt-4 p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                        Real-Time Risk & Downside Calculation
+                      </span>
+                      {calculatedFinancials.planned_rr !== null && (
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300">
+                          Planned R:R 1 : {calculatedFinancials.planned_rr}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Downside: Loss if SL gets hit */}
+                      <div className="p-3.5 rounded-xl bg-rose-950/25 border border-rose-500/30">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            Loss if SL Gets Hit
+                          </span>
+                          {calculatedFinancials.sl_loss_percent_capital !== null && (
+                            <span className="text-[10px] font-mono text-rose-300 bg-rose-900/50 px-1.5 py-0.5 rounded border border-rose-500/20 font-bold">
+                              {calculatedFinancials.sl_loss_percent_capital}% Capital
+                            </span>
+                          )}
+                        </div>
+                        {calculatedFinancials.sl_loss_amount !== null ? (
+                          <div>
+                            <div className="text-xl font-bold font-mono text-rose-400">
+                              -{formatCurrency(calculatedFinancials.sl_loss_amount, currency)}
+                            </div>
+                            <div className="text-[11px] font-mono text-rose-300/80 mt-1 flex items-center justify-between">
+                              <span>Downside per share:</span>
+                              <strong className="text-rose-200">-{calculatedFinancials.sl_loss_points} pts</strong>
+                            </div>
+                            <div className="text-[11px] font-mono text-rose-300/80 flex items-center justify-between">
+                              <span>Total Position:</span>
+                              <span className="text-white font-semibold">{quantity} units @ ₹{entryPrice || '0'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500 italic py-2">
+                            Enter Stop Loss to calculate exact loss
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Upside: Profit if Target gets hit */}
+                      <div className="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/30">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            Profit if Target Gets Hit
+                          </span>
+                          {calculatedFinancials.target_profit_percent_capital !== null && (
+                            <span className="text-[10px] font-mono text-emerald-300 bg-emerald-900/50 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold">
+                              +{calculatedFinancials.target_profit_percent_capital}% Capital
+                            </span>
+                          )}
+                        </div>
+                        {calculatedFinancials.target_profit_amount !== null ? (
+                          <div>
+                            <div className="text-xl font-bold font-mono text-emerald-400">
+                              +{formatCurrency(calculatedFinancials.target_profit_amount, currency)}
+                            </div>
+                            <div className="text-[11px] font-mono text-emerald-300/80 mt-1 flex items-center justify-between">
+                              <span>Upside per share:</span>
+                              <strong className="text-emerald-200">+{calculatedFinancials.target_profit_points} pts</strong>
+                            </div>
+                            <div className="text-[11px] font-mono text-emerald-300/80 flex items-center justify-between">
+                              <span>Target Level:</span>
+                              <span className="text-white font-semibold">₹{target}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500 italic py-2">
+                            Enter Target to calculate profit potential
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               </div>
             )}

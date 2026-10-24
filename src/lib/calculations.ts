@@ -49,16 +49,52 @@ export function calculateTradeFinancials(trade: {
   let actual_rr: number | null = null;
   let r_multiple: number | null = null;
   let planned_risk_amount = trade.risk_amount ? Number(trade.risk_amount) : null;
+  let sl_loss_amount: number | null = null;
+  let sl_loss_points: number | null = null;
+  let sl_loss_percent_capital: number | null = null;
+  let is_sl_valid: boolean | null = null;
 
-  // Calculate Planned Risk from Stop Loss if available
+  let target_profit_amount: number | null = null;
+  let target_profit_points: number | null = null;
+  let target_profit_percent_capital: number | null = null;
+  let is_target_valid: boolean | null = null;
+
+  let points_captured: number | null = null;
+  const capital = trade.account_capital ? Number(trade.account_capital) : null;
+
+  // Calculate Planned Risk / Loss on Stop Loss if available
   if (sl !== null && entry > 0 && qty > 0) {
-    const riskPerUnit = trade.direction === 'Long' ? (entry - sl) : (sl - entry);
-    if (riskPerUnit > 0) {
-      planned_risk_amount = roundTo2(riskPerUnit * qty);
+    const rawRiskDiff = trade.direction === 'Long' ? (entry - sl) : (sl - entry);
+    if (rawRiskDiff > 0) {
+      is_sl_valid = true;
+      sl_loss_points = roundTo2(rawRiskDiff);
+      sl_loss_amount = roundTo2(rawRiskDiff * qty);
+      planned_risk_amount = sl_loss_amount;
+      if (capital && capital > 0) {
+        sl_loss_percent_capital = roundTo2((sl_loss_amount / capital) * 100);
+      }
+    } else {
+      is_sl_valid = false;
+      sl_loss_points = roundTo2(rawRiskDiff);
     }
   }
 
-  // Calculate Planned R:R if target & SL are present
+  // Calculate Planned Target Profit & R:R if target & SL are present
+  if (target !== null && entry > 0 && qty > 0) {
+    const rawRewardDiff = trade.direction === 'Long' ? (target - entry) : (entry - target);
+    if (rawRewardDiff > 0) {
+      is_target_valid = true;
+      target_profit_points = roundTo2(rawRewardDiff);
+      target_profit_amount = roundTo2(rawRewardDiff * qty);
+      if (capital && capital > 0) {
+        target_profit_percent_capital = roundTo2((target_profit_amount / capital) * 100);
+      }
+    } else {
+      is_target_valid = false;
+      target_profit_points = roundTo2(rawRewardDiff);
+    }
+  }
+
   if (sl !== null && target !== null && entry > 0) {
     const riskPerUnit = trade.direction === 'Long' ? (entry - sl) : (sl - entry);
     const rewardPerUnit = trade.direction === 'Long' ? (target - entry) : (entry - target);
@@ -70,8 +106,10 @@ export function calculateTradeFinancials(trade: {
   // Calculate Gross & Net P&L if exit price is set
   if (exit !== null && entry > 0 && qty > 0) {
     if (trade.direction === 'Long') {
+      points_captured = roundTo2(exit - entry);
       gross_pnl = roundTo2((exit - entry) * qty);
     } else {
+      points_captured = roundTo2(entry - exit);
       gross_pnl = roundTo2((entry - exit) * qty);
     }
 
@@ -95,7 +133,16 @@ export function calculateTradeFinancials(trade: {
     totalCharges,
     net_pnl,
     net_pnl_percent,
+    points_captured,
     planned_risk_amount,
+    sl_loss_amount,
+    sl_loss_points,
+    sl_loss_percent_capital,
+    is_sl_valid,
+    target_profit_amount,
+    target_profit_points,
+    target_profit_percent_capital,
+    is_target_valid,
     planned_rr,
     actual_rr,
     r_multiple,
